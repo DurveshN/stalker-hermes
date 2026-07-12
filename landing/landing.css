@@ -1,0 +1,30 @@
+* { box-sizing: border-box; margin: 0; }
+body {
+  background: radial-gradient(1200px 600px at 50% -10%, #1a2233 0%, #0b0e14 60%);
+  color: #e6e9ef; font: 16px/1.6 ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  min-height: 100vh;
+}
+main { max-width: 820px; margin: 0 auto; padding: 64px 20px; }
+.pill { display: inline-block; background: #141922; border: 1px solid #262d3a; color: #8b93a4; padding: 6px 14px; border-radius: 999px; font-size: 13px; }
+.hero h1 { font-size: 44px; line-height: 1.1; margin: 20px 0; letter-spacing: -0.02em; }
+.sub { color: #b3baccff; font-size: 18px; max-width: 620px; }
+.signup { display: flex; gap: 10px; margin: 28px 0 10px; flex-wrap: wrap; }
+.signup input {
+  flex: 1; min-width: 200px; background: #141922; border: 1px solid #262d3a; color: #e6e9ef;
+  padding: 12px 14px; border-radius: 10px; font-size: 15px;
+}
+.signup button {
+  background: #6ea8fe; color: #071019; border: none; padding: 12px 20px; border-radius: 10px;
+  font-weight: 700; font-size: 15px; cursor: pointer;
+}
+.msg { min-height: 22px; font-size: 14px; color: #8b93a4; }
+.msg.ok { color: #86efac; }
+.msg.err { color: #fca5a5; }
+.cta-row { margin-top: 20px; }
+.pro { color: #c4b5fd; text-decoration: none; font-weight: 600; }
+.pro:hover { text-decoration: underline; }
+.how { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 64px; }
+.step { background: #141922; border: 1px solid #262d3a; border-radius: 12px; padding: 18px; }
+.step b { display: block; margin-bottom: 8px; }
+.step span { color: #8b93a4; font-size: 14px; }
+@media (max-width: 700px) { .how { grid-template-columns: 1fr; } .hero h1 { font-size: 32px; } }

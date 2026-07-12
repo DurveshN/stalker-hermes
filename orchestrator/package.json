@@ -1,0 +1,27 @@
+{
+  "name": "orchestrator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --import tsx/esm src/index.ts",
+    "dev": "node --import tsx/esm --watch src/index.ts",
+    "once": "node --import tsx/esm src/runOnce.ts",
+    "evals": "node --import tsx/esm evals/run-evals.ts"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.12",
+    "ai": "^7.0.22",
+    "convex": "^1.42.1",
+    "dotenv": "^16.4.5",
+    "linkup-sdk": "^3.2.7",
+    "pg": "^8.22.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.11.0",
+    "tsx": "^4.23.0",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,14 @@
+name = "stalker-hermes-worker"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Hourly backup trigger — the primary hourly trigger is Hermes cron on the VM,
+# this is a redundant safety net (and demonstrates Cloudflare doing real work).
+[triggers]
+crons = ["0 * * * *"]
+
+# Set with: wrangler secret put CONVEX_URL / DODO_WEBHOOK_SECRET
+# [vars] are non-secret; secrets are set via `wrangler secret put`.
+[vars]
+ALLOW_ORIGIN = "*"
