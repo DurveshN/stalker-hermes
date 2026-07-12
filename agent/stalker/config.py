@@ -26,8 +26,8 @@ class Settings:
 
     # LLM (OpenAI — real API key, separate from the VM's Codex login)
     openai_api_key = _opt("OPENAI_API_KEY")
-    manager_model = _opt("MANAGER_MODEL", "gpt-5.1")
-    specialist_model = _opt("SPECIALIST_MODEL", "gpt-5.1-mini")
+    manager_model = _opt("MANAGER_MODEL", "gpt-5.5")
+    specialist_model = _opt("SPECIALIST_MODEL", "gpt-5.5")
 
     linkup_api_key = _opt("LINKUP_API_KEY")
     convex_url = _opt("CONVEX_URL")
@@ -91,8 +91,8 @@ settings = Settings()
 # correct; only the rate constants need real values. AI pricing may vary.
 # ---------------------------------------------------------------------------
 _DEFAULT_RATES: dict[str, tuple[float, float]] = {
+    "gpt-5.5": (2.50, 10.00),
     "gpt-5.1": (2.50, 10.00),
-    "gpt-5.1-mini": (0.40, 1.60),
     "gpt-5-mini": (0.40, 1.60),
 }
 
