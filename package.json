@@ -2,23 +2,17 @@
   "name": "stalker-hermes",
   "version": "0.1.0",
   "private": true,
-  "description": "Stalker Hermes — an AI agency of agents that continuously tracks competitors across LinkedIn, X, blogs, news, and SEO. Runs on Hermes (base harness), powered by Linkup + Convex + Cloudflare + ElevenLabs + Dodo.",
+  "description": "Stalker Hermes — an AI agency that tracks competitors across LinkedIn, X, news, blogs and SEO, files GitHub issues/PRs, and briefs you in Slack. Python crew on Hermes, powered by Linkup + Convex + Cloudflare + ElevenLabs + Dodo.",
   "workspaces": [
-    "orchestrator",
-    "dashboard",
     "landing",
     "workers",
     "convex-backend"
   ],
   "scripts": {
-    "orch": "npm --workspace orchestrator run start",
-    "orch:dev": "npm --workspace orchestrator run dev",
-    "orch:evals": "npm --workspace orchestrator run evals",
     "convex:dev": "npm --workspace convex-backend run dev",
     "convex:deploy": "npm --workspace convex-backend run deploy",
-    "dash:dev": "npm --workspace dashboard run dev",
-    "dash:build": "npm --workspace dashboard run build",
     "landing:dev": "npm --workspace landing run dev",
+    "landing:deploy": "npm --workspace landing run deploy",
     "worker:deploy": "npm --workspace workers run deploy"
   },
   "engines": {
