@@ -1,0 +1,27 @@
+[project]
+name = "stalker-agent"
+version = "0.1.0"
+description = "Stalker Hermes — Python competitive-intelligence agent crew"
+requires-python = ">=3.11"
+dependencies = [
+    "openai>=1.54.0",
+    "linkup-sdk>=0.2.0",
+    "sqlalchemy>=2.0.36",
+    "alembic>=1.14.0",
+    "psycopg[binary]>=3.2.3",
+    "convex>=0.7.0",
+    "pydantic>=2.9.0",
+    "python-dotenv>=1.0.1",
+    "httpx>=0.27.2",
+]
+
+[project.scripts]
+stalker = "stalker.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["stalker*"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

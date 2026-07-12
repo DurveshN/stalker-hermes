@@ -71,3 +71,25 @@ as text + **ElevenLabs** voice notes. Runs **hourly via Hermes cron** and **on-d
   orchestrator/.env; deploy orchestrator + Hermes cron to VM; deploy CF
   worker/dashboard/landing; create Dodo product. Then end-to-end verify a run.
 - Env note: ANTHROPIC_API_KEY already present in shell; others not yet set.
+
+## 2026-07-12 — Pivot after brainstorming (Option B) + Next.js landing
+- **Product sharpened:** from monitor→brief to an **autonomous analyst** that
+  **files the work** — material findings become **GitHub issues/PRs** on
+  `DurveshN/stalker-hermes` (action queue), plus Telegram text + ElevenLabs voice.
+- **Stack pivot:** orchestrator rewritten in **Python** (`agent/` package) —
+  OpenAI (real key, not the VM Codex login), SQLAlchemy + Alembic → Azure Postgres,
+  Convex kept as live dashboard mirror. TS `orchestrator/` is now legacy.
+- **Store boundary:** Convex owns config (competitors, trackers, evals, feedback,
+  signups); Postgres owns produced records (runs, trace_events, findings,
+  raw_searches, seo_snapshots, action_items, alerts). Crew mirrors live subset to
+  Convex. Findings reference competitor by `competitor_key` (Convex id) + name.
+- **Landing:** replaced static HTML with **Next.js 16 + Tailwind 4 + shadcn**
+  (ops-console theme, animated intel feed, agency diagram, Telegram sample brief,
+  pricing, FAQ, signup→/api/signup→Worker→Convex). Builds clean.
+- **Keys:** OPENAI_API_KEY + LINKUP_API_KEY now in root `.env` (verified).
+- **GitHub:** gh authed as DurveshN (repo scope); repo exists (empty, public).
+- **Decision:** no external observability tool (rubric: homebrewed scores same).
+- **Build method:** foundation (config/models/db/convex_client/llm/types/trace/
+  memory/store/linkup/alembic) built serially; crew/integrations/evals/(convex+
+  dashboard) built by 4 parallel subagents. Integration (pipeline/main/cli) next.
+- Design spec: docs/superpowers/specs/2026-07-12-stalker-hermes-design.md.

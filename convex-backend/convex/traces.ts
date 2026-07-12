@@ -6,7 +6,7 @@ import { TRACE_TYPE } from "./schema";
 export const emit = mutation({
   args: {
     runId: v.id("runs"),
-    parentId: v.optional(v.id("traces")),
+    parentSeq: v.optional(v.number()),
     seq: v.number(),
     agent: v.string(),
     type: TRACE_TYPE,
@@ -24,7 +24,7 @@ export const emit = mutation({
   handler: async (ctx, args) => {
     return await ctx.db.insert("traces", {
       runId: args.runId,
-      parentId: args.parentId,
+      parentSeq: args.parentSeq,
       seq: args.seq,
       agent: args.agent,
       type: args.type,
@@ -43,7 +43,7 @@ export const emit = mutation({
   },
 });
 
-// Full ordered trace list for a run (dashboard builds the tree from parentId).
+// Full ordered trace list for a run (dashboard builds the tree from parentSeq).
 export const forRun = query({
   args: { runId: v.id("runs") },
   handler: async (ctx, args) => {

@@ -5,6 +5,7 @@ import { RunDetail } from "./views/RunDetail.js";
 import { DiffView } from "./views/DiffView.js";
 import { CompetitorsView } from "./views/CompetitorsView.js";
 import { AlertsView } from "./views/AlertsView.js";
+import { ActionsView } from "./views/ActionsView.js";
 import { EvalsView } from "./views/EvalsView.js";
 import { SearchView } from "./views/SearchView.js";
 
@@ -14,6 +15,7 @@ export type View =
   | { name: "diff" }
   | { name: "competitors" }
   | { name: "alerts" }
+  | { name: "actions" }
   | { name: "evals" }
   | { name: "search" };
 
@@ -21,6 +23,7 @@ const TABS: { key: View["name"]; label: string }[] = [
   { key: "runs", label: "Runs" },
   { key: "competitors", label: "Competitors & Trackers" },
   { key: "alerts", label: "Alerts" },
+  { key: "actions", label: "Action Queue" },
   { key: "diff", label: "Run Diff" },
   { key: "search", label: "Search" },
   { key: "evals", label: "Evals" },
@@ -57,6 +60,7 @@ export function App() {
         {view.name === "diff" && <DiffView />}
         {view.name === "competitors" && <CompetitorsView />}
         {view.name === "alerts" && <AlertsView />}
+        {view.name === "actions" && <ActionsView />}
         {view.name === "evals" && <EvalsView />}
         {view.name === "search" && <SearchView />}
       </main>

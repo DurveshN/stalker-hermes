@@ -10,13 +10,13 @@ interface Node extends Trace {
 }
 
 function buildTree(traces: Trace[]): Node[] {
-  const byId = new Map<string, Node>();
+  const bySeq = new Map<number, Node>();
   const roots: Node[] = [];
   const sorted = [...traces].sort((a, b) => a.seq - b.seq);
-  for (const t of sorted) byId.set(t._id, { ...t, children: [] });
+  for (const t of sorted) bySeq.set(t.seq, { ...t, children: [] });
   for (const t of sorted) {
-    const node = byId.get(t._id)!;
-    if (t.parentId && byId.has(t.parentId)) byId.get(t.parentId)!.children.push(node);
+    const node = bySeq.get(t.seq)!;
+    if (t.parentSeq != null && bySeq.has(t.parentSeq)) bySeq.get(t.parentSeq)!.children.push(node);
     else roots.push(node);
   }
   return roots;

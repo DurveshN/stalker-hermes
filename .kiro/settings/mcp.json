@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "dodo-knowledge": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote@latest",
+        "https://knowledge.dodopayments.com/mcp"
+      ],
+      "disabled": false,
+      "autoApprove": [
+        "search_docs",
+        "search_docs",
+        "search_docs"
+      ]
+    }
+  }
+}

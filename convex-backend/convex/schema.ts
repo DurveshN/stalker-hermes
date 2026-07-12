@@ -117,7 +117,7 @@ export default defineSchema({
   // Trace tree — one row per agent/tool step (observability core) -----------
   traces: defineTable({
     runId: v.id("runs"),
-    parentId: v.optional(v.id("traces")), // builds the who-called-whom tree
+    parentSeq: v.optional(v.number()), // builds the who-called-whom tree (parent's seq)
     seq: v.number(), // ordering within a run
     agent: v.string(), // "manager" | "linkedin" | "seo" | ...
     type: TRACE_TYPE,
@@ -175,6 +175,22 @@ export default defineSchema({
   })
     .index("by_competitor", ["competitorId"])
     .index("by_ack", ["acknowledged"]),
+
+  // Action queue: GitHub issues/PRs the crew files ------------------------
+  actionItems: defineTable({
+    runId: v.id("runs"),
+    competitorId: v.id("competitors"),
+    findingId: v.optional(v.id("findings")),
+    kind: v.union(v.literal("issue"), v.literal("pr")),
+    title: v.string(),
+    body: v.string(),
+    ghNumber: v.optional(v.number()),
+    ghUrl: v.optional(v.string()),
+    status: v.string(),
+    ts: v.number(),
+  })
+    .index("by_competitor", ["competitorId"])
+    .index("by_run", ["runId"]),
 
   // Eval cases + results (evaluation & iteration parameter) -----------------
   evalCases: defineTable({
