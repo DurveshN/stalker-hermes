@@ -14,3 +14,9 @@ orchestrator/.env
 
 # windows cruft
 *.stackdump
+
+# python build artifacts
+*.egg-info/
+__pycache__/
+.venv/
+agent/.venv/
