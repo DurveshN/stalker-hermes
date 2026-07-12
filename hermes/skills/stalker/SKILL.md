@@ -1,7 +1,7 @@
 ---
 name: stalker
-description: Track competitors and read their latest intelligence briefs.
-version: 1.0.0
+description: Track competitors and read their latest competitive intelligence.
+version: 2.0.0
 author: stalker-hermes
 license: MIT
 metadata:
@@ -13,56 +13,56 @@ metadata:
 # Stalker — competitor tracking
 
 Control the Stalker Hermes competitive-intelligence crew from Telegram. This skill
-enqueues tracking runs and reads back the latest findings. The actual agent crew
-runs as a separate orchestrator service that subscribes to the Convex `runQueue`.
+shells out to the `stalker` Python CLI on this VM, which enqueues work to Convex; the
+`stalker-agent` systemd service runs the crew and delivers briefs to Slack.
 
 ## When to Use
 
-Use when the user asks to track a competitor, trigger a competitor sweep, or see the
-latest intel ("what's new with <company>", "track <company> now", "any updates on
-competitors").
+Use when the user asks to track a competitor, run a competitor sweep, list tracked
+competitors, or see the latest intel ("what's new with <company>", "track <company>",
+"any updates on competitors").
 
 ## Prerequisites
 
-- `CONVEX_URL` available on the VM (exported in the shell or `~/.hermes/.env`).
-- The orchestrator service running on the VM (systemd `stalker-orch`).
-- `scripts/stalker.mjs` present in this skill directory.
+- `stalker-agent` service running on this VM (it is, via systemd).
+- The venv python at `~/stalker-hermes/agent/.venv/bin/python`.
 
 ## How to Run
 
-Run the helper with Node (already on the VM via Hermes' bundled node):
+Always invoke through the venv python from the agent directory:
 
-- Trigger an on-demand run for one competitor:
-  `node scripts/stalker.mjs track "<competitor name>" ["optional focus"]`
-- Trigger a sweep of all active competitors:
-  `node scripts/stalker.mjs sweep`
-- Add a competitor:
-  `node scripts/stalker.mjs add "<name>" ["domain.com"]`
-- Read the latest findings for a competitor:
-  `node scripts/stalker.mjs latest "<competitor name>"`
+`STALKER=~/stalker-hermes/agent/.venv/bin/python; cd ~/stalker-hermes/agent`
+
+- Track one competitor now (optionally with a focus):
+  `$STALKER -m stalker.cli track "<competitor>" "<optional focus>"`
+- Sweep all active competitors:
+  `$STALKER -m stalker.cli sweep`
 - List tracked competitors:
-  `node scripts/stalker.mjs list`
+  `$STALKER -m stalker.cli list`
+- Read the latest findings for a competitor:
+  `$STALKER -m stalker.cli latest "<competitor>"`
 
-Report the script's JSON output back to the user in plain language. Escalations and
-voice briefs are delivered automatically by the orchestrator; this skill is for
-on-demand control and lookups.
+The commands return JSON. Summarize it back to the user in plain language. Tracking is
+asynchronous — `track`/`sweep` enqueue the run; the full brief is delivered to Slack
+(and via any configured Telegram escalation) within a few minutes. Use `latest` to read
+results once a run has finished.
 
 ## Quick Reference
 
 | Intent | Command |
 | --- | --- |
-| Track one now | `node scripts/stalker.mjs track "Acme"` |
-| Track with focus | `node scripts/stalker.mjs track "Acme" "pricing changes"` |
-| Sweep all | `node scripts/stalker.mjs sweep` |
-| Add competitor | `node scripts/stalker.mjs add "Acme" "acme.com"` |
-| Latest intel | `node scripts/stalker.mjs latest "Acme"` |
+| Track one now | `$STALKER -m stalker.cli track "Acme"` |
+| Track with focus | `$STALKER -m stalker.cli track "Acme" "pricing changes"` |
+| Sweep all | `$STALKER -m stalker.cli sweep` |
+| List tracked | `$STALKER -m stalker.cli list` |
+| Latest intel | `$STALKER -m stalker.cli latest "Acme"` |
 
 ## Pitfalls
 
-- A `track`/`sweep` call only *enqueues* work; findings appear once the orchestrator
-  finishes the run (usually under a minute). Use `latest` to read results.
-- If `CONVEX_URL` is unset the script exits with an error — export it first.
+- `track`/`sweep` only *enqueue*; findings appear once the crew finishes (~minutes).
+- Run from `~/stalker-hermes/agent` so the CLI loads the repo-root `.env` (CONVEX_URL,
+  OPENAI/LINKUP keys, Postgres). The venv python already has all dependencies.
 
 ## Verification
 
-`node scripts/stalker.mjs list` should return the tracked competitors as JSON.
+`$STALKER -m stalker.cli list` returns the tracked competitors as JSON.
