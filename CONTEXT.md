@@ -93,3 +93,26 @@ as text + **ElevenLabs** voice notes. Runs **hourly via Hermes cron** and **on-d
   memory/store/linkup/alembic) built serially; crew/integrations/evals/(convex+
   dashboard) built by 4 parallel subagents. Integration (pipeline/main/cli) next.
 - Design spec: docs/superpowers/specs/2026-07-12-stalker-hermes-design.md.
+
+## 2026-07-12 — Slack surface + Azure deployment (LIVE)
+- **Slack chosen over web dashboard** as the product surface. Socket Mode app
+  (`slack_app.py`): `/stalker track|sweep|latest|runs|run <id>|trace <id>`, bare
+  `/stalker` = latest intel. Findings-forward views (brief + findings + GitHub
+  action links); `trace` = agent tree w/ per-step tokens+cost (observability).
+  Responses post in-channel. `slack_delivery.py` posts briefs + ElevenLabs voice.
+  Slack app `stalkerhermes`, team `stalker-hermes`; bot invited to channel.
+  Dashboard code kept in repo (localhost:5173) but not the demo surface.
+- **DEPLOYED to VM (98.70.29.145):** agent at `~/stalker-hermes/agent`, uv venv,
+  systemd **`stalker-agent`** (enabled, active) runs `stalker serve` = runQueue
+  subscriber + Slack socket handler 24/7. `.env` at `~/stalker-hermes/.env`.
+  Logs: `sudo journalctl -u stalker-agent -f`. Redeploy: tar agent → scp →
+  uv pip install -e . → restart (no local rsync on Windows; VM had no
+  python3-venv so uv is used).
+- **Hermes hourly cron** `stalker-hourly-sweep` (`0 * * * *`, --no-agent) runs
+  `~/.hermes/scripts/stalker_sweep.sh` → `stalker sweep` → enqueues Convex →
+  daemon runs crew. This is Hermes' cron capability doing real work (eligibility).
+- Duplicate `stalker-pg-29641` deleted; `stalker-pg` is the one DB.
+- Resilience: init_db retries + serve tolerates transient Azure PG TLS drops;
+  Slack socket handler in main thread (SIGINT), queue poller in daemon thread.
+- **Remaining:** Dodo checkout (landing → Cloudflare), deploy landing/worker to
+  Cloudflare, Wispr dictation evidence. Escalation thresholds still noisy (30/run).
