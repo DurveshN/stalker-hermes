@@ -193,3 +193,26 @@ export const stats = query({
     };
   },
 });
+
+// Mask an email for public display: keep first char + domain, hide the rest.
+// "karan@callmissed.com" -> "k•••@callmissed.com"
+function maskEmail(email: string): string {
+  const [local, domain] = email.split("@");
+  if (!domain) return "•••";
+  const head = local.slice(0, 1);
+  return `${head}${"•".repeat(Math.max(2, Math.min(local.length - 1, 3)))}@${domain}`;
+}
+
+// Recent signups for public social proof — emails MASKED (no PII leaves the DB).
+export const recentPublic = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const rows = await ctx.db.query("signups").order("desc").take(args.limit ?? 8);
+    return rows.map((s) => ({
+      email: maskEmail(s.email),
+      company: s.company ?? null,
+      plan: s.plan,
+      ts: s.ts,
+    }));
+  },
+});

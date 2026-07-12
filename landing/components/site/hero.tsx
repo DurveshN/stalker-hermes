@@ -3,6 +3,7 @@ import { IntelFeed } from "./intel-feed";
 import { SignupForm } from "./signup-form";
 import { AuthDialog } from "./auth-dialog";
 import { UserCount } from "./user-count";
+import { RecentSignups } from "./recent-signups";
 import { buttonVariants } from "@/components/ui/button";
 
 export function Hero() {
@@ -60,9 +61,10 @@ export function Hero() {
         <div className="flex items-center">
           <div className="w-full">
             <IntelFeed />
-            <p className="mt-3 text-center font-mono text-xs text-muted-foreground">
+            <p className="mt-3 mb-4 text-center font-mono text-xs text-muted-foreground">
               illustrative feed — your competitors, live
             </p>
+            <RecentSignups />
           </div>
         </div>
       </div>
