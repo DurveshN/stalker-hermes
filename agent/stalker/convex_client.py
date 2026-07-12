@@ -20,6 +20,11 @@ def _get():
     return _client
 
 
+def _clean(args: dict[str, Any]) -> dict[str, Any]:
+    """Drop None values — Convex v.optional() means 'absent', and rejects null."""
+    return {k: v for k, v in args.items() if v is not None}
+
+
 def mutation(name: str, args: dict[str, Any]) -> Any:
     """Run a Convex mutation by dotted path, e.g. 'runs:start'. Returns None if
     Convex is disabled or the call fails (mirroring is best-effort)."""
@@ -27,7 +32,7 @@ def mutation(name: str, args: dict[str, Any]) -> Any:
     if c is None:
         return None
     try:
-        return c.mutation(_path(name), args)
+        return c.mutation(_path(name), _clean(args))
     except Exception as e:  # never let mirroring break a run
         print(f"[convex] mutation {name} failed: {e}")
         return None
@@ -38,7 +43,7 @@ def query(name: str, args: dict[str, Any]) -> Any:
     if c is None:
         return None
     try:
-        return c.query(_path(name), args)
+        return c.query(_path(name), _clean(args))
     except Exception as e:
         print(f"[convex] query {name} failed: {e}")
         return None

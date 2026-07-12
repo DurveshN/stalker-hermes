@@ -64,8 +64,12 @@ class Settings:
 
     @property
     def pg_url(self) -> str:
+        # URL-encode credentials so special chars (#, @, /, etc.) don't break the DSN.
+        from urllib.parse import quote_plus
+        user = quote_plus(self.pg_user)
+        pw = quote_plus(self.pg_password)
         return (
-            f"postgresql+psycopg://{self.pg_user}:{self.pg_password}"
+            f"postgresql+psycopg://{user}:{pw}"
             f"@{self.pg_host}:{self.pg_port}/{self.pg_db}?sslmode={self.pg_sslmode}"
         )
 

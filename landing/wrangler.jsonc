@@ -1,0 +1,21 @@
+{
+  "main": ".open-next/worker.js",
+  "name": "stalker-hermes-landing",
+  "compatibility_date": "2025-06-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  // Non-secret, server-side runtime vars.
+  "vars": {
+    "DODO_PAYMENTS_ENVIRONMENT": "test_mode",
+    "DODO_PAYMENTS_RETURN_URL": "https://stalker-hermes-landing.stalker-hermes.workers.dev/checkout/success"
+  }
+  // Secrets (DODO_PAYMENTS_API_KEY, DODO_PAYMENTS_WEBHOOK_SECRET) are NOT stored
+  // here. Set them with `wrangler secret put <NAME>` or in the Cloudflare
+  // dashboard (Workers -> your worker -> Settings -> Variables).
+  //
+  // NEXT_PUBLIC_DODO_PRODUCT_ID_PRO is inlined at BUILD time (client bundle),
+  // so it must live in landing/.env before `npm run deploy` — not here.
+}

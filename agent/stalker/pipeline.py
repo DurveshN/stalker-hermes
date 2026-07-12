@@ -17,6 +17,8 @@ from . import escalate, voice
 from .memory import dedup_hash
 from .types import sev_rank
 
+MAX_ACTIONS_PER_RUN = 3  # keep the GitHub action queue a triaged shortlist
+
 
 @dataclass
 class RunOutcome:
@@ -89,7 +91,8 @@ def _persist_and_act(memory: Memory, tracer: Tracer, run_pg_id, run_convex_id,
     ]
 
     # 2) File the action queue on GitHub (issues, or PRs for content responses).
-    for item in result.actions:
+    #    Cap per run so the queue stays a triaged shortlist, not issue spam.
+    for item in result.actions[:MAX_ACTIONS_PER_RUN]:
         match = _match_finding(item.finding_title, new_by_title)
         if match is None:
             tracer.span(agent="pipeline", type="escalation",
