@@ -1,102 +1,100 @@
 # 🕵️ Stalker Hermes
 
-An **AI agency** that continuously tracks your competitors across LinkedIn, X/Twitter,
-news, blogs, and SEO/website changes — then **files the work** so you don't have to.
-A **manager agent** plans and delegates to **specialist agents** (one per channel),
-each powered by **Linkup** live web search. Findings are deduped, threat-scored, and
-stored in **Convex** (live config/mirror) + **Azure Postgres** (durable warehouse).
-Material findings become **GitHub issues/PRs** on the tracked repo (an action queue),
-and high-severity items escalate to **Slack** as text + **ElevenLabs** voice briefs.
-Runs **hourly via Hermes cron** and **on-demand** from Slack.
+An **AI agency** that replaces a human competitive-intelligence analyst. A crew of
+agents watches your competitors across LinkedIn, X, news, blogs, and SEO/website
+changes, decides what actually matters, and **files the work** — material findings
+become **GitHub issues/PRs** (an action queue), and high-severity items escalate to
+**Slack** as text + **ElevenLabs** voice briefs. Runs **hourly via Hermes cron** and
+**on-demand** from Slack or Telegram.
 
 Built for the GrowthX Hermes Buildathon — **Track 03: AI as Agency**.
 
-## Architecture
+- **Landing:** https://stalker-hermes-landing.stalker-hermes.workers.dev
+- **Live agent:** Azure VM `98.70.29.145`, systemd `stalker-agent` (24/7)
+- **Repo:** https://github.com/DurveshN/stalker-hermes
+
+## How it works
 
 ```
- Triggers (all enqueue a job):                 Convex (config + live mirror)
- ┌────────────────────────────┐                ┌──────────────────────────────┐
- │ Hermes cron (hourly, VM)    │──┐             │ competitors / trackers        │
- │ Slack /stalker command      │  │  enqueue    │ runQueue  ◄── triggers        │
- │ Cloudflare cron (backup)    │  ├─────────────►│ runs / traces (mirror)        │
- │ stalker CLI (track/sweep)   │  │             │ findings / alerts / evals     │
- └────────────────────────────┘  ┘             └───────────────┬──────────────┘
-                                                        subscribe│ (onUpdate)
- Agent (Python crew on the Hermes VM, systemd) ◄────────────────┘
-   manager → [linkedin, twitter, news, blog, seo, product] specialists
-   → dynamic sub-specialist spawn → synthesis → escalate
-   store: Postgres (runs, trace_events, findings, raw_searches, seo_snapshots,
-          action_items, alerts) + mirror hot subset to Convex
-   escalate → GitHub issues/PRs · Slack text + ElevenLabs voice
-
- Slack app (Socket Mode): /stalker track|sweep|latest|runs|run|trace — brief +
-   findings + GitHub action links; trace = agent tree w/ per-step tokens + cost.
- Landing (Next.js → Cloudflare Pages): signup → Convex, Dodo Pro checkout.
+ Triggers (all enqueue to a Convex runQueue):
+ ┌───────────────────────────────┐          Convex (config + live mirror)
+ │ Hermes cron (hourly, on VM)    │          ┌────────────────────────────┐
+ │ Slack /stalker or Telegram     │─enqueue─▶│ competitors · trackers      │
+ │ Cloudflare cron (backup)       │          │ runQueue ◀── triggers       │
+ └───────────────────────────────┘          │ runs · traces · findings    │
+                                             │ actionItems · alerts        │
+ Python agent (systemd on the VM) ◀──subscribe┘ signups (auth + count)
+   manager → [linkedin, x, news, blog, seo, product] specialists (Linkup)
+   → dynamic sub-specialists → dedup + threat-score → synthesize
+   → dual-write Postgres (source of truth) + Convex (live mirror)
+   → file GitHub issues/PRs (action queue) → Slack brief + ElevenLabs voice
 ```
 
-Why a Convex `runQueue` bus: the VM only exposes port 22, so instead of opening
-inbound ports, every trigger inserts a row and the agent daemon subscribes.
+The VM only exposes port 22, so every trigger inserts a row into the Convex
+`runQueue` and the agent subscribes — no inbound ports.
+
+## Stack
+
+- **Agent crew:** Python 3.12, OpenAI `gpt-5.5` (tool-calling + structured output).
+- **Search:** Linkup live web search (per specialist).
+- **Config + live mirror:** Convex (`cheerful-badger-968`). **Warehouse:** Azure
+  Postgres Flexible (`stalker-pg` v18) via SQLAlchemy + Alembic.
+- **Surface:** Slack Socket Mode app (`/stalker` commands + Block Kit trace views) +
+  ElevenLabs voice; Telegram control via a Hermes skill.
+- **Landing:** Next.js 16 + Tailwind 4 + shadcn, on Cloudflare (OpenNext). Email+
+  password auth (Convex actions, PBKDF2) + a live reactive signup counter + Dodo
+  Payments Pro checkout.
+- **Harness:** Hermes on the VM — Telegram control, hourly cron, memory (eligibility).
 
 ## Repo layout
 
 | Dir | What |
 | --- | --- |
-| `agent/` | Python agent crew (manager + specialists), tracer, memory, evals, Slack app, CLI. Runs on the VM. |
-| `convex-backend/` | Convex schema + functions + runQueue (config + live mirror). |
-| `dashboard/` | React/Vite observability UI (kept in repo; Slack is the demo surface). |
-| `landing/` | Next.js landing page + signup + Dodo checkout (→ Cloudflare Pages). |
-| `hermes/` | Hermes `stalker` skill + helper script. |
-| `infra/` | Azure Postgres provisioning + VM agent deploy + Hermes cron setup. |
-| `orchestrator/`, `workers/` | Legacy TS orchestrator + Cloudflare Worker (pre-pivot; not the active path). |
-
-## Setup checklist
-
-Do these in order. Steps marked 🔑 need a credential from you.
-
-1. **🔑 Convex** — `cd convex-backend && npx convex dev` (opens browser, creates the
-   deployment, generates `_generated/`). Copy the deployment URL → `CONVEX_URL`.
-   Leave `convex dev` running, or `npx convex deploy` for prod.
-2. **🔑 Linkup** — get an API key at app.linkup.so → `LINKUP_API_KEY`.
-3. **🔑 OpenAI** — API key → `OPENAI_API_KEY`.
-4. **Azure Postgres** — `bash infra/provision-postgres.sh` → paste the printed
-   `PG*` vars into the root `.env`.
-5. **🔑 ElevenLabs** — API key + voice id → `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`.
-6. **🔑 Slack** — create a Socket Mode app, install to the workspace, invite the bot
-   to your channel; set `SLACK_BOT_TOKEN` + `SLACK_APP_TOKEN` (+ channel id).
-7. **🔑 GitHub** — a token with repo scope + the target repo → `GITHUB_TOKEN`,
-   `GITHUB_REPO` (findings become issues/PRs here).
-8. **Fill the root `.env`** from `.env.example` with all of the above.
-9. **Deploy the agent to the VM** — `KEY=~/Downloads/hermes_key.pem bash infra/deploy-agent.sh`
-   (rsyncs `agent/` + `.env`, installs deps via `uv`, runs the `stalker-agent` systemd service).
-10. **Install Hermes skill + hourly cron** — `CONVEX_URL=... KEY=... bash infra/setup-hermes-cron.sh`.
-11. **🔑 Cloudflare** — `wrangler login`, then deploy the Next.js landing to
-    Cloudflare Pages (`cd landing && npm run build && npm run deploy`).
-12. **🔑 Dodo Payments** — create the Pro product, wire the checkout link + webhook
-    into the landing signup flow.
+| `agent/` | Python agent crew, pipeline, store, Slack app, evals, Alembic. Runs on the VM. |
+| `convex-backend/` | Convex schema + functions (config, runQueue, traces, findings, actions, signups/auth). |
+| `landing/` | Next.js landing: auth, live count, Dodo checkout → Cloudflare. |
+| `dashboard/` | React/Vite observability dashboard (built; Slack is the primary surface). |
+| `workers/` | Cloudflare Worker: on-demand trigger, signup, Dodo webhook, CF cron. |
+| `hermes/` | Hermes `stalker` skill (Telegram control → Python CLI). |
+| `infra/` | Azure Postgres provisioning + VM deploy scripts. |
+| `docs/` | Design spec. |
 
 ## Run it
 
-- One-shot locally: `cd agent && stalker once "OpenAI" "recent launches"`.
-- Enqueue a run for one competitor: `stalker track "OpenAI" "pricing changes"`.
-- Sweep all active competitors: `stalker sweep`.
-- Read latest findings: `stalker latest "OpenAI"`.
-- Run the daemon (queue subscriber + Slack handler): `stalker serve`.
-- On-demand via Slack: `/stalker track "OpenAI"` → the crew runs and the brief
-  (findings + GitHub action links) posts back in-channel within a few minutes.
+Locally (needs `.env` — see `.env.example`):
 
-## How this maps to Track 03 scoring
+```bash
+cd agent && uv venv && uv pip install -e .
+.venv/bin/python -m stalker.cli once "OpenAI" "recent launches"   # one-shot run
+.venv/bin/python -m stalker.cli serve                              # queue + Slack daemon
+.venv/bin/python -m stalker.evals.run_evals                        # CI eval gate
+```
 
-| Parameter (weight) | How we hit it |
+From Slack: `/stalker track <competitor> | <focus>` · `/stalker runs` ·
+`/stalker run <id>` (findings + brief + filed actions) · `/stalker trace <id>`
+(agent trace tree with per-step tokens + cost).
+
+From Telegram: message the Hermes bot ("track OpenAI", "latest on Anthropic").
+
+## Track 03 scoring map
+
+| Parameter (weight) | How |
 | --- | --- |
-| Real output shipping (20x) | Hourly + on-demand runs write real findings to Convex/Postgres, **file GitHub issues/PRs**, and escalate by exception to Slack. |
-| Agent org structure (5x) | Manager dynamically plans/delegates per request; spawns sub-specialists on notable findings (emergent org). |
-| Observability (7x) | Trace tree, per-step tokens+cost, per-agent rollup, run diff, cost/failure signals — surfaced via Slack `trace` + the dashboard. |
-| Evaluation & iteration (5x) | Named eval set + CI gate that fails on regression; human "wrong" feedback becomes regression cases (closed loop). |
-| Handoffs & memory (2x) | 3-layer memory: current run · competitor history · business rules (tracker config), passed manager→specialist. |
-| Cost & latency (1x) | Cheap specialist model + fast/standard Linkup; per-run cost cap guardrail. |
-| Management UI (1x) | Non-eng adds a competitor + defines a tracker role (channels/depth/spend cap/severity) — the role definition. |
+| Real output (20x) | Hourly + on-demand → GitHub issues/PRs + Slack briefs on real surfaces. |
+| Observability (7x) | `/stalker trace` renders the trace tree with tokens + cost per step; every step persisted. |
+| Agent org (5x) | Manager plans/delegates per request; spawns sub-specialists on notable findings. |
+| Evaluation (5x) | Named eval set + CI gate that fails on pass-rate regression; feedback → regression cases. |
+| Handoffs/memory (2x) | 3-layer memory: current run · competitor history · tracker rules. |
+| Cost/latency (1x) | Bounded specialist loops + per-run spend cap. |
+| Management UI (1x) | Add competitor + define a tracker role (channels/depth/caps/threshold). |
 
-**Power-ups (+150):** Linkup (search core) · Convex (state) · Cloudflare (Pages) ·
-ElevenLabs (voice briefs) · Dodo (Pro checkout) · Wispr Flow (dictation).
-**Eligibility:** Hermes is the base harness — Slack/Telegram control surface, hourly
-cron trigger, and memory — plus the product was built with Hermes/Codex sessions.
+**Power-ups:** Linkup (search), Convex (backend), Cloudflare (landing + worker + cron),
+ElevenLabs (voice briefs), Dodo (Pro checkout), Wispr Flow (dictation). **Cross-track:**
+landing signups (email+password, live counter) feed Virality/Revenue.
+
+## Notes
+
+- `gpt-5.5` per-token pricing constants in `agent/stalker/config.py` are `[Unverified]`
+  placeholders (override via `PRICE_IN_*`/`PRICE_OUT_*` env) — cost accounting is
+  structurally correct.
+- Secrets live only in `.env` (gitignored). See `.env.example` for the full list.
