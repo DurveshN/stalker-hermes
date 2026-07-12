@@ -16,6 +16,16 @@ from . import queries, slack_ui
 
 _app = None
 
+_HELP = (
+    "*Stalker Hermes* — competitive-intel crew\n"
+    "`/stalker track <competitor> | <focus>` — track now (brief lands here)\n"
+    "`/stalker sweep` — track all active competitors\n"
+    "`/stalker latest <competitor>` — latest findings for one competitor\n"
+    "`/stalker runs` — recent runs\n"
+    "`/stalker run <id>` — findings + brief + filed actions for a run\n"
+    "`/stalker trace <id>` — step through a run's agent trace"
+)
+
 
 def _build_app():
     from slack_bolt import App
@@ -48,7 +58,7 @@ def _build_app():
             for r in runs:
                 blocks += slack_ui.run_summary_blocks(r)
                 blocks.append({"type": "context", "elements": [
-                    {"type": "mrkdwn", "text": f"run id `{r['id']}` · `/stalker run {r['id']}`"}]})
+                    {"type": "mrkdwn", "text": f"`/stalker run {r['id']}` for findings · `/stalker trace {r['id']}` for the trace"}]})
             respond(blocks=blocks or None, text="Recent runs")
         elif sub == "run" and arg.strip().isdigit():
             rid = int(arg.strip())
@@ -56,15 +66,27 @@ def _build_app():
             if not run:
                 respond(f"No run `{rid}`.")
             else:
+                respond(blocks=slack_ui.run_detail_blocks(
+                    run, queries.run_findings(rid), queries.run_action_links(rid)),
+                    text=f"Run {rid} findings")
+        elif sub == "trace" and arg.strip().isdigit():
+            rid = int(arg.strip())
+            run = queries.run_row(rid)
+            if not run:
+                respond(f"No run `{rid}`.")
+            else:
                 respond(blocks=slack_ui.trace_blocks(run, queries.run_traces(rid)),
                         text=f"Run {rid} trace")
+        elif sub in ("", "help"):
+            # Bare /stalker → show the latest findings across all competitors (the value).
+            latest = queries.recent_findings_all(10)
+            if latest:
+                respond(blocks=slack_ui.brief_blocks("Latest intel", latest, "", []),
+                        text="Latest intel")
+            else:
+                respond(_HELP)
         else:
-            respond("*Stalker Hermes*\n"
-                    "`/stalker track <competitor> | <focus>`\n"
-                    "`/stalker sweep`\n"
-                    "`/stalker latest <competitor>`\n"
-                    "`/stalker runs`\n"
-                    "`/stalker run <id>`")
+            respond(_HELP)
 
     return app
 

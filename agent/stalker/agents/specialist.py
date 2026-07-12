@@ -17,7 +17,7 @@ from ..types import SpecialistOutput, CHANNEL_BRIEF
 from ..tools import linkup
 from .. import store
 
-_MAX_TURNS = 5
+_MAX_TURNS = 3
 
 _SEARCH_TOOL = [{
     "type": "function",
@@ -127,7 +127,7 @@ def _investigate(
                                  "content": "(empty query — skipped)"})
                 continue
             try:
-                results, raw = linkup.search_results(query, depth=depth, max_results=8)
+                results, raw = linkup.search_results(query, depth=depth, max_results=6)
                 store.save_raw_search(run_pg_id, memory.competitor, role_label, depth, query, raw)
                 tracer.span(
                     agent=role_label, type="linkup_query",

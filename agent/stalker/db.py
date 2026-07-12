@@ -20,11 +20,22 @@ def _init_engine() -> None:
         _Session = sessionmaker(bind=_engine, expire_on_commit=False)
 
 
-def init_db() -> None:
-    """Create tables directly (dev/bootstrap). Prod uses Alembic migrations."""
+def init_db(retries: int = 3) -> None:
+    """Create tables directly (dev/bootstrap). Prod uses Alembic migrations.
+    Retries on transient connect blips (Azure Burstable can drop the first TLS)."""
+    import time as _t
     _init_engine()
-    if _engine is not None:
-        Base.metadata.create_all(_engine)
+    if _engine is None:
+        return
+    for attempt in range(retries):
+        try:
+            Base.metadata.create_all(_engine)
+            return
+        except Exception as e:  # noqa: BLE001
+            if attempt == retries - 1:
+                raise
+            print(f"[db] init retry {attempt + 1}/{retries} after: {str(e)[:80]}")
+            _t.sleep(2)
 
 
 @contextmanager

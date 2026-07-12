@@ -40,26 +40,9 @@ def _handle(job: dict) -> None:
         cvx.mutation("runQueue:complete", {"id": job_id, "failed": True})
 
 
-def _start_slack_thread() -> None:
-    """Start the Slack Socket-Mode command handler in a background thread so the
-    same daemon serves both the runQueue and /stalker commands."""
-    if not settings.slack_socket_enabled:
-        print("[slack] socket mode not configured — commands disabled")
-        return
-    import threading
-    from .slack_app import serve_socket
-    t = threading.Thread(target=serve_socket, daemon=True, name="slack-socket")
-    t.start()
-    print("[slack] socket-mode command handler started")
-
-
-def serve() -> None:
-    if not settings.convex_enabled:
-        raise RuntimeError("CONVEX_URL required to run the queue subscriber")
-    init_db()
-    _start_slack_thread()
-    print(f"Stalker Hermes orchestrator up. worker={settings.worker_id}")
-    print(f"Convex={settings.convex_url}  poll={settings.runqueue_poll_secs}s")
+def _poll_loop() -> None:
+    """Poll the Convex runQueue forever, handling claimed jobs."""
+    print(f"[queue] subscriber up. worker={settings.worker_id} poll={settings.runqueue_poll_secs}s")
     while True:
         try:
             pending = cvx.query("runQueue:pending", {}) or []
@@ -68,6 +51,28 @@ def serve() -> None:
         except Exception as e:  # noqa: BLE001
             print(f"[poll error] {e}")
         time.sleep(settings.runqueue_poll_secs)
+
+
+def serve() -> None:
+    if not settings.convex_enabled:
+        raise RuntimeError("CONVEX_URL required to run the queue subscriber")
+    try:
+        init_db()  # best-effort: tables usually already exist via Alembic
+    except Exception as e:  # noqa: BLE001
+        print(f"[db] init_db skipped (transient?): {str(e)[:100]} — continuing")
+    print(f"Stalker Hermes orchestrator up. Convex={settings.convex_url}")
+
+    if settings.slack_socket_enabled:
+        # Slack's SocketModeHandler must own the main thread (it sets a SIGINT
+        # handler), so run the queue poller in a daemon thread and let Slack block.
+        import threading
+        from .slack_app import serve_socket
+        threading.Thread(target=_poll_loop, daemon=True, name="queue-poller").start()
+        print("[slack] socket-mode command handler starting (main thread)")
+        serve_socket()
+    else:
+        print("[slack] socket mode not configured — commands disabled")
+        _poll_loop()
 
 
 if __name__ == "__main__":

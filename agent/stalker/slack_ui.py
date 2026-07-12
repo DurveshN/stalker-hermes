@@ -55,6 +55,31 @@ def run_summary_blocks(run: dict) -> list[dict]:
     )]
 
 
+def run_detail_blocks(run: dict, findings: list, action_links: list[dict]) -> list[dict]:
+    """Findings-forward run view: brief + findings + filed actions (the value),
+    with a hint to pull the trace. Leads with what matters, not the plumbing."""
+    blocks = [{"type": "header",
+               "text": {"type": "plain_text", "text": f"🕵️ {run.get('competitorName','?')} — run #{run.get('id')}"}}]
+    blocks += run_summary_blocks(run)
+    if run.get("summary"):
+        blocks.append({"type": "divider"})
+        blocks.append(_sec(f"*Analyst brief*\n{run['summary'][:1400]}"))
+    if findings:
+        blocks.append({"type": "divider"})
+        lines = "\n".join(
+            f"{_SEV_EMOJI.get(f.severity,'•')} *{f.severity.upper()}* · _{f.category}_ — {f.title}"
+            + (f"  <{f.url}|source>" if getattr(f, 'url', None) else "")
+            for f in findings
+        )
+        blocks.append(_sec(f"*Top findings*\n{lines}"))
+    if action_links:
+        al = "\n".join(f"• <{a['url']}|#{a['number']} {a['title']}>" for a in action_links if a.get("url"))
+        if al:
+            blocks.append(_sec(f"*Filed to the action queue*\n{al}"))
+    blocks.append(_ctx(f"trace: `/stalker trace {run.get('id')}` · {int(run.get('newFindingsCount',0) or 0)} findings this run"))
+    return blocks
+
+
 def trace_blocks(run: dict, traces: list[dict], limit: int = 40) -> list[dict]:
     """Render the trace tree in-thread: indented by parent_seq depth, with
     per-step model/tokens/cost. This is the observability 'step through a run'."""
