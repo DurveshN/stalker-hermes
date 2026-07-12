@@ -71,6 +71,8 @@ input, select {
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
 .badge { color: #fff; padding: 2px 8px; border-radius: 6px; font-size: 11px; text-transform: uppercase; }
 .badge.warn { background: #f59e0b; }
+.badge.kind-issue { background: #6366f1; }
+.badge.kind-pr { background: #16a34a; }
 
 .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
 .hint { color: var(--muted); font-size: 12px; margin: 4px 0 12px; }

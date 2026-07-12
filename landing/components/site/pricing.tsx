@@ -1,8 +1,8 @@
 import { Check } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { SignupForm } from "./signup-form";
+import { ProCheckoutButton } from "./pro-checkout-button";
 
 const TIERS = [
   {
@@ -72,9 +72,7 @@ export function Pricing() {
                 {t.cta === "signup" ? (
                   <SignupForm compact />
                 ) : (
-                  <Button className="w-full" variant="secondary" disabled>
-                    Go Pro — coming soon
-                  </Button>
+                  <ProCheckoutButton />
                 )}
               </div>
             </Card>
