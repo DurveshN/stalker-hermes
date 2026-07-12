@@ -52,6 +52,11 @@ class Settings:
     elevenlabs_api_key = _opt("ELEVENLABS_API_KEY")
     elevenlabs_voice_id = _opt("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
 
+    # Slack (primary product surface: commands + briefs + trace views)
+    slack_bot_token = _opt("SLACK_BOT_TOKEN")      # xoxb-...
+    slack_app_token = _opt("SLACK_APP_TOKEN")      # xapp-... (Socket Mode)
+    slack_channel_id = _opt("SLACK_CHANNEL_ID")    # default channel for briefs
+
     # Runtime knobs
     runqueue_poll_secs = float(_opt("RUNQUEUE_POLL_SECS", "4"))
     run_cost_cap_usd = float(_opt("RUN_COST_CAP_USD", "0.50"))
@@ -84,6 +89,14 @@ class Settings:
     @property
     def elevenlabs_enabled(self) -> bool:
         return bool(self.elevenlabs_api_key)
+
+    @property
+    def slack_enabled(self) -> bool:
+        return bool(self.slack_bot_token)
+
+    @property
+    def slack_socket_enabled(self) -> bool:
+        return bool(self.slack_bot_token and self.slack_app_token)
 
 
 settings = Settings()

@@ -16,6 +16,7 @@ from .tools import github
 from . import escalate, voice
 from .memory import dedup_hash
 from .types import sev_rank
+from . import slack_delivery, queries
 
 MAX_ACTIONS_PER_RUN = 3  # keep the GitHub action queue a triaged shortlist
 
@@ -139,22 +140,37 @@ def _match_finding(finding_title: str, new_by_title: dict) -> tuple | None:
 
 
 def _escalate(memory, tracer, run_pg_id, run_convex_id, brief, escalate_findings, outcome):
-    lines = "\n".join(
-        f"• *{f.severity.upper()}* [{f.category}] {f.title}" + (f"\n  {f.url}" if f.url else "")
-        for (_pg, _cvx, f) in escalate_findings
-    )
-    header = f"🕵️ *Stalker Hermes* — {memory.competitor}\n{len(escalate_findings)} high-signal update(s):"
-    body = f"{header}\n{lines}\n\n{brief[:1500]}"
+    findings = [f for (_pg, _cvx, f) in escalate_findings]
+    action_links = queries.run_action_links(run_pg_id) if run_pg_id else []
     delivered: list[str] = []
-    if escalate.send_text(body):
-        delivered.append("telegram")
-
     voice_url = None
+
+    # Synthesize the voice brief once; deliver to every configured surface.
+    audio = None
     if memory.voice_brief:
         audio = voice.synthesize(f"Competitive intelligence update on {memory.competitor}. {brief}")
         if audio:
             voice_url = voice.upload_to_convex(audio)
-            if escalate.send_voice_note(audio, f"Intel brief — {memory.competitor}"):
+
+    # Slack (primary surface): rich brief + action links + voice in-thread.
+    ts = slack_delivery.post_brief(memory.competitor, findings, brief, action_links)
+    if ts:
+        delivered.append("slack")
+        if audio and slack_delivery.upload_voice(audio, memory.competitor, thread_ts=ts):
+            delivered.append("voice")
+
+    # Telegram (kept for the Hermes eligibility demo when configured).
+    if escalate_findings and settings.telegram_enabled:
+        lines = "\n".join(
+            f"• *{f.severity.upper()}* [{f.category}] {f.title}" + (f"\n  {f.url}" if f.url else "")
+            for f in findings
+        )
+        body = (f"🕵️ *Stalker Hermes* — {memory.competitor}\n"
+                f"{len(findings)} high-signal update(s):\n{lines}\n\n{brief[:1500]}")
+        if escalate.send_text(body):
+            delivered.append("telegram")
+            if audio and "voice" not in delivered and escalate.send_voice_note(
+                    audio, f"Intel brief — {memory.competitor}"):
                 delivered.append("voice")
 
     for (f_pg, f_cvx, f) in escalate_findings:

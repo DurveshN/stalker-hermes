@@ -40,10 +40,24 @@ def _handle(job: dict) -> None:
         cvx.mutation("runQueue:complete", {"id": job_id, "failed": True})
 
 
+def _start_slack_thread() -> None:
+    """Start the Slack Socket-Mode command handler in a background thread so the
+    same daemon serves both the runQueue and /stalker commands."""
+    if not settings.slack_socket_enabled:
+        print("[slack] socket mode not configured — commands disabled")
+        return
+    import threading
+    from .slack_app import serve_socket
+    t = threading.Thread(target=serve_socket, daemon=True, name="slack-socket")
+    t.start()
+    print("[slack] socket-mode command handler started")
+
+
 def serve() -> None:
     if not settings.convex_enabled:
         raise RuntimeError("CONVEX_URL required to run the queue subscriber")
     init_db()
+    _start_slack_thread()
     print(f"Stalker Hermes orchestrator up. worker={settings.worker_id}")
     print(f"Convex={settings.convex_url}  poll={settings.runqueue_poll_secs}s")
     while True:
