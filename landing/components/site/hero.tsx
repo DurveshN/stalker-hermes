@@ -1,6 +1,9 @@
 import { Badge } from "@/components/ui/badge";
 import { IntelFeed } from "./intel-feed";
 import { SignupForm } from "./signup-form";
+import { AuthDialog } from "./auth-dialog";
+import { UserCount } from "./user-count";
+import { buttonVariants } from "@/components/ui/button";
 
 export function Hero() {
   return (
@@ -24,7 +27,27 @@ export function Hero() {
             LinkedIn, X, news, blogs and SEO — every hour, automatically. The moment
             something matters, you get a briefing on Telegram. Text and voice.
           </p>
-          <div id="get-access" className="mt-8 max-w-xl scroll-mt-24">
+          <div id="get-access" className="mt-8 flex max-w-xl flex-wrap items-center gap-3 scroll-mt-24">
+            <AuthDialog
+              defaultMode="signup"
+              trigger={
+                <button className={buttonVariants({ size: "lg" })}>Create free account →</button>
+              }
+            />
+            <AuthDialog
+              defaultMode="signin"
+              trigger={
+                <button className={buttonVariants({ size: "lg", variant: "outline" })}>
+                  Sign in
+                </button>
+              }
+            />
+          </div>
+          <div className="mt-4">
+            <UserCount className="text-sm text-muted-foreground" />
+          </div>
+          <div className="mt-4 max-w-xl">
+            <p className="mb-2 text-xs text-muted-foreground">Or just drop your email:</p>
             <SignupForm />
           </div>
           <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-xs text-muted-foreground">

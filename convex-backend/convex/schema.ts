@@ -229,9 +229,12 @@ export default defineSchema({
     company: v.optional(v.string()),
     source: v.optional(v.string()),
     plan: v.union(v.literal("free"), v.literal("pro")),
+    passwordHash: v.optional(v.string()),
+    passwordSalt: v.optional(v.string()),
     dodoCustomerId: v.optional(v.string()),
     dodoSubscriptionId: v.optional(v.string()),
     firstUseAt: v.optional(v.number()),
+    lastLoginAt: v.optional(v.number()),
     ts: v.number(),
   }).index("by_email", ["email"]),
 });

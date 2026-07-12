@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Radar } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { AuthDialog } from "./auth-dialog";
 
 export function Nav() {
   return (
@@ -16,9 +17,18 @@ export function Nav() {
           <a href="#pricing" className="hover:text-foreground">Pricing</a>
           <a href="#faq" className="hover:text-foreground">FAQ</a>
         </nav>
-        <a href="#get-access" className={buttonVariants({ size: "sm" })}>
-          Get access
-        </a>
+        <div className="flex items-center gap-2">
+          <AuthDialog
+            defaultMode="signin"
+            trigger={
+              <button className={buttonVariants({ size: "sm", variant: "ghost" })}>Sign in</button>
+            }
+          />
+          <AuthDialog
+            defaultMode="signup"
+            trigger={<button className={buttonVariants({ size: "sm" })}>Sign up</button>}
+          />
+        </div>
       </div>
     </header>
   );
