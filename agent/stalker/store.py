@@ -10,6 +10,9 @@ from .db import session_scope
 from .models import Run, Finding, RawSearch, SeoSnapshot, ActionItem, Alert
 from .memory import Memory
 
+# Valid Convex `channel` literals (dynamic sub-specialist channels fold to "product").
+_CONVEX_CHANNELS = {"linkedin", "twitter", "news", "blog", "seo", "product"}
+
 
 def start_run(memory: Memory, trigger: str, version: str) -> tuple[int | None, str | None]:
     """Create the run row (PG) + mirror (Convex). Returns (pg_id, convex_id)."""
@@ -92,10 +95,14 @@ def upsert_finding(run_pg_id, run_convex_id, memory: Memory, channel: str, f) ->
 
     convex_id = None
     if run_convex_id and memory.competitor_key:
+        # Convex `channel` is a fixed 6-literal union; dynamic sub-specialist
+        # findings carry a role name (e.g. "funding-deep-dive") — fold those to
+        # "product" for the mirror. Postgres keeps the real channel above.
+        cvx_channel = channel if channel in _CONVEX_CHANNELS else "product"
         res = cvx.mutation("findings:upsert", {
-            "runId": run_convex_id, "competitorId": memory.competitor_key, "channel": channel,
+            "runId": run_convex_id, "competitorId": memory.competitor_key, "channel": cvx_channel,
             "title": f.title, "url": f.url or None, "summary": f.summary, "category": f.category,
-            "severity": f.severity, "relevance": f.relevance, "dedupHash": h,
+            "severity": f.severity, "relevance": float(f.relevance), "dedupHash": h,
             "publishedAt": f.published_at,
         })
         convex_id = res.get("id") if isinstance(res, dict) else res

@@ -76,6 +76,7 @@ export default defineSchema({
       v.literal("dashboard"),
       v.literal("worker"),
       v.literal("manual"),
+      v.literal("slack"),
     ),
     requestedBy: v.optional(v.string()),
     focus: v.optional(v.string()), // optional free-text focus for this run

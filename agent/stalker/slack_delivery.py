@@ -16,9 +16,44 @@ def _web():
     return _client
 
 
-def post_brief(competitor: str, findings: list, brief: str,
-               action_links: list[dict], channel: str | None = None) -> str | None:
-    """Post an escalation brief. Returns the message ts, or None."""
+def start_thread(competitor: str, focus: str | None = None,
+                 channel: str | None = None) -> str | None:
+    """Post the run-start message and return its ts to thread progress under."""
+    c = _web()
+    if c is None:
+        return None
+    ch = channel or settings.slack_channel_id
+    if not ch:
+        return None
+    try:
+        focus_line = f" · focus: _{focus}_" if focus else ""
+        resp = c.chat_postMessage(
+            channel=ch,
+            text=f"🕵️ *Tracking {competitor}*{focus_line} — the crew is on it…",
+        )
+        return resp.get("ts")
+    except Exception as e:
+        print(f"[slack] start_thread failed: {e}")
+        return None
+
+
+def thread_reply(thread_ts: str | None, text: str, channel: str | None = None) -> None:
+    """Post a streaming progress line as a reply in the run's thread."""
+    c = _web()
+    if c is None or not thread_ts:
+        return
+    ch = channel or settings.slack_channel_id
+    if not ch:
+        return
+    try:
+        c.chat_postMessage(channel=ch, thread_ts=thread_ts, text=text)
+    except Exception as e:
+        print(f"[slack] thread_reply failed: {e}")
+
+
+def post_brief(competitor: str, findings: list, brief: str, action_links: list[dict],
+               channel: str | None = None, thread_ts: str | None = None) -> str | None:
+    """Post the final brief. Returns the message ts, or None."""
     c = _web()
     if c is None:
         return None
@@ -27,7 +62,7 @@ def post_brief(competitor: str, findings: list, brief: str,
         return None
     try:
         blocks = slack_ui.brief_blocks(competitor, findings, brief, action_links)
-        resp = c.chat_postMessage(channel=ch, blocks=blocks,
+        resp = c.chat_postMessage(channel=ch, thread_ts=thread_ts, blocks=blocks,
                                   text=f"Intel brief — {competitor}")
         return resp.get("ts")
     except Exception as e:  # never break a run on delivery

@@ -49,11 +49,15 @@ def run_crew(
     tracer = Tracer(run_pg_id, run_convex_id)
     outcome = RunOutcome(run_pg_id=run_pg_id, run_convex_id=run_convex_id)
 
+    # Open a Slack thread and stream live progress into it.
+    thread_ts = slack_delivery.start_thread(memory.competitor, focus)
+    on_progress = (lambda m: slack_delivery.thread_reply(thread_ts, m)) if thread_ts else None
+
     try:
-        result = run_manager(memory, tracer, run_pg_id)
+        result = run_manager(memory, tracer, run_pg_id, on_progress=on_progress)
         outcome.brief = result.brief
         outcome.findings = result.findings
-        _persist_and_act(memory, tracer, run_pg_id, run_convex_id, result, outcome)
+        _persist_and_act(memory, tracer, run_pg_id, run_convex_id, result, outcome, thread_ts)
         if tracer.cost_usd >= memory.spend_cap_usd:
             outcome.status = "partial"
     except Exception as e:  # noqa: BLE001
@@ -61,6 +65,7 @@ def run_crew(
         outcome.error = str(e)
         tracer.span(agent="pipeline", type="error", label="run_crew failed",
                     status="error", error=str(e))
+        slack_delivery.thread_reply(thread_ts, f"⚠️ Run failed: {str(e)[:200]}")
 
     store.finish_run(
         run_pg_id, run_convex_id, status=outcome.status,
@@ -73,7 +78,8 @@ def run_crew(
 
 
 def _persist_and_act(memory: Memory, tracer: Tracer, run_pg_id, run_convex_id,
-                     result: ManagerResult, outcome: RunOutcome) -> None:
+                     result: ManagerResult, outcome: RunOutcome,
+                     thread_ts: str | None = None) -> None:
     # 1) Persist findings (dedup inside store); keep new ones keyed by title.
     new_by_title: dict[str, tuple] = {}  # title.lower() -> (pg_id, convex_id, finding)
     for f in result.findings:
@@ -123,10 +129,19 @@ def _persist_and_act(memory: Memory, tracer: Tracer, run_pg_id, run_convex_id,
                     status="ok" if res.get("ok") else "error",
                     output=res.get("url"), error=res.get("error"))
 
-    # 3) Escalate by exception → Telegram text + optional ElevenLabs voice.
+    # 3) ALWAYS post the final brief into the run thread (fixes silent runs) —
+    #    on-demand users always get a result, not just when something escalates.
+    new_findings = [f for (_pg, _cvx, f) in new_by_title.values()]
+    new_findings.sort(key=lambda f: sev_rank(f.severity), reverse=True)
+    action_links = queries.run_action_links(run_pg_id) if run_pg_id else []
+    slack_delivery.post_brief(
+        memory.competitor, new_findings[:8], result.brief, action_links, thread_ts=thread_ts,
+    )
+
+    # 4) Escalate by exception (high-severity only) → voice + Telegram + alerts.
     if escalate_findings:
         _escalate(memory, tracer, run_pg_id, run_convex_id, result.brief,
-                  escalate_findings, outcome)
+                  escalate_findings, outcome, thread_ts)
 
 
 def _match_finding(finding_title: str, new_by_title: dict) -> tuple | None:
@@ -139,10 +154,10 @@ def _match_finding(finding_title: str, new_by_title: dict) -> tuple | None:
     return None
 
 
-def _escalate(memory, tracer, run_pg_id, run_convex_id, brief, escalate_findings, outcome):
+def _escalate(memory, tracer, run_pg_id, run_convex_id, brief, escalate_findings, outcome,
+              thread_ts=None):
     findings = [f for (_pg, _cvx, f) in escalate_findings]
-    action_links = queries.run_action_links(run_pg_id) if run_pg_id else []
-    delivered: list[str] = []
+    delivered: list[str] = ["slack"]  # the brief was already posted to the thread
     voice_url = None
 
     # Synthesize the voice brief once; deliver to every configured surface.
@@ -151,13 +166,8 @@ def _escalate(memory, tracer, run_pg_id, run_convex_id, brief, escalate_findings
         audio = voice.synthesize(f"Competitive intelligence update on {memory.competitor}. {brief}")
         if audio:
             voice_url = voice.upload_to_convex(audio)
-
-    # Slack (primary surface): rich brief + action links + voice in-thread.
-    ts = slack_delivery.post_brief(memory.competitor, findings, brief, action_links)
-    if ts:
-        delivered.append("slack")
-        if audio and slack_delivery.upload_voice(audio, memory.competitor, thread_ts=ts):
-            delivered.append("voice")
+            if slack_delivery.upload_voice(audio, memory.competitor, thread_ts=thread_ts):
+                delivered.append("voice")
 
     # Telegram (kept for the Hermes eligibility demo when configured).
     if escalate_findings and settings.telegram_enabled:

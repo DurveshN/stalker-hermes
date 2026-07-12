@@ -39,7 +39,15 @@ def _findings_digest(findings: list[ChannelFinding]) -> str:
     )
 
 
-def run_manager(memory: Memory, tracer: Tracer, run_pg_id) -> ManagerResult:
+def run_manager(memory: Memory, tracer: Tracer, run_pg_id, on_progress=None) -> ManagerResult:
+    # on_progress(text): optional callback for live streaming (e.g. to Slack).
+    def progress(msg: str) -> None:
+        if on_progress:
+            try:
+                on_progress(msg)
+            except Exception:
+                pass
+
     allowed = [c for c in memory.channels if c in ALL_CHANNELS]
     if not allowed:
         allowed = list(ALL_CHANNELS)
@@ -73,6 +81,7 @@ def run_manager(memory: Memory, tracer: Tracer, run_pg_id) -> ManagerResult:
         tokens_in=tin, tokens_out=tout, latency_ms=t.ms,
         output=f"{planned} :: {plan.rationale}",
     )
+    progress(f"📋 Plan: dispatching *{len(planned)}* specialists — {', '.join(planned)}")
 
     # ---- DELEGATE -----------------------------------------------------------
     findings: list[ChannelFinding] = []
@@ -99,7 +108,9 @@ def run_manager(memory: Memory, tracer: Tracer, run_pg_id) -> ManagerResult:
 
         with ThreadPoolExecutor(max_workers=len(batch)) as pool:
             for channel, out in pool.map(_one, batch):
+                n = len(out.findings)
                 findings.extend(_as_channel_findings(out, channel))
+                progress(f"✓ {channel}: {n} finding{'s' if n != 1 else ''}")
 
     # ---- REVIEW + SPAWN -----------------------------------------------------
     notable = [f for f in findings if sev_rank(f.severity) >= sev_rank("high")]
@@ -125,6 +136,7 @@ def run_manager(memory: Memory, tracer: Tracer, run_pg_id) -> ManagerResult:
         for s in spawn.spawn[:2]:
             if tracer.cost_usd >= memory.spend_cap_usd:
                 break
+            progress(f"🔬 Spawning deep-dive: *{s.role_name}*")
             sub = run_sub_specialist(s.role_name, s.focus, memory, tracer, root_seq, run_pg_id)
             findings.extend(_as_channel_findings(sub, s.role_name))
 
@@ -166,6 +178,7 @@ def run_manager(memory: Memory, tracer: Tracer, run_pg_id) -> ManagerResult:
             f"Focus: {memory.focus or 'general'}\nFINDINGS:\n{_findings_digest(findings)}"
         )},
     ]
+    progress("🧠 Synthesizing the brief…")
     with Timer() as t:
         synth = chat(settings.manager_model, synth_msgs)
     tracer.span(

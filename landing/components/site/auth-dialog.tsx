@@ -14,6 +14,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 type Mode = "signup" | "signin";
 
+const SLACK_INVITE = process.env.NEXT_PUBLIC_SLACK_INVITE_URL || "";
+
 export function AuthDialog({
   trigger,
   defaultMode = "signup",
@@ -23,46 +25,88 @@ export function AuthDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>(defaultMode);
+  const [joined, setJoined] = useState(false);
   const register = useAction(api.signups.register);
   const signin = useAction(api.signups.signin);
 
+  function reset(next: boolean) {
+    setOpen(next);
+    if (!next) setJoined(false); // clear success state when dialog closes
+  }
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={reset}>
       <DialogTrigger render={trigger} />
       <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Welcome to Stalker Hermes</DialogTitle>
-          <DialogDescription>
-            Create an account to put a crew of agents on your competitors.
-          </DialogDescription>
-        </DialogHeader>
-        <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="signup">Sign up</TabsTrigger>
-            <TabsTrigger value="signin">Sign in</TabsTrigger>
-          </TabsList>
-          <TabsContent value="signup">
-            <AuthForm
-              cta="Create account"
-              withCompany
-              onSubmit={async ({ email, password, company }) => {
-                await register({ email, password, company: company || undefined });
-                toast.success("Account created — you're in.");
-                setOpen(false);
-              }}
-            />
-          </TabsContent>
-          <TabsContent value="signin">
-            <AuthForm
-              cta="Sign in"
-              onSubmit={async ({ email, password }) => {
-                await signin({ email, password });
-                toast.success("Signed in.");
-                setOpen(false);
-              }}
-            />
-          </TabsContent>
-        </Tabs>
+        {joined ? (
+          <div className="text-center">
+            <DialogHeader>
+              <DialogTitle>🎉 You&apos;re in.</DialogTitle>
+              <DialogDescription>
+                Last step — join our Slack to talk to the agent and get your competitor
+                briefs. It runs entirely in Slack.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="mt-5 space-y-3">
+              {SLACK_INVITE ? (
+                <a
+                  href={SLACK_INVITE}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={buttonVariants({ size: "lg" }) + " w-full"}
+                >
+                  Join our Slack →
+                </a>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  A Slack invite is on its way to your email.
+                </p>
+              )}
+              <button
+                onClick={() => reset(false)}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                Maybe later
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle>Welcome to Stalker Hermes</DialogTitle>
+              <DialogDescription>
+                Create an account to put a crew of agents on your competitors.
+              </DialogDescription>
+            </DialogHeader>
+            <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="signup">Sign up</TabsTrigger>
+                <TabsTrigger value="signin">Sign in</TabsTrigger>
+              </TabsList>
+              <TabsContent value="signup">
+                <AuthForm
+                  cta="Create account"
+                  withCompany
+                  onSubmit={async ({ email, password, company }) => {
+                    await register({ email, password, company: company || undefined });
+                    toast.success("Account created — you're in.");
+                    setJoined(true); // show the Join-Slack step
+                  }}
+                />
+              </TabsContent>
+              <TabsContent value="signin">
+                <AuthForm
+                  cta="Sign in"
+                  onSubmit={async ({ email, password }) => {
+                    await signin({ email, password });
+                    toast.success("Signed in.");
+                    setJoined(true);
+                  }}
+                />
+              </TabsContent>
+            </Tabs>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
